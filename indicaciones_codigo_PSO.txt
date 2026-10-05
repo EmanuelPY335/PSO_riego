@@ -1,0 +1,260 @@
+==============================================================
+INDICACIONES DEL CÓDIGO - PSO PARA DISEÑO ÓPTIMO DE RIEGO
+Grupo 3 - Lucas B. y Emanuel B.
+Archivo de código: pso_riego.py
+==============================================================
+
+
+--------------------------------------------------------------
+0. RESUMEN RÁPIDO
+--------------------------------------------------------------
+Objetivo: encontrar la mejor combinación de caudal (Q), presión (P)
+y tiempo de riego (t) que maximice la eficiencia hídrica usando PSO.
+
+Cada partícula = un vector [Q, P, t].
+La función objetivo mide qué tan mala es esa configuración (se
+minimiza). El enjambre se va moviendo hasta converger a la mejor.
+
+
+--------------------------------------------------------------
+1. REQUISITOS Y CÓMO EJECUTAR
+--------------------------------------------------------------
+- Python 3.9 o superior
+- Librerías: numpy, matplotlib
+
+Instalación:
+    pip install numpy matplotlib
+
+Ejecución:
+    python pso_riego.py
+
+Salida esperada:
+- En consola: validación con la esfera, estadísticas del PSO (media
+  y desviación), mejor configuración (Q, P, t), eficiencia,
+  resultado de la línea base y de la configuración fija.
+- Archivos generados: convergencia.png, particulas.png, parametros.png
+
+
+--------------------------------------------------------------
+2. ESTRUCTURA SUGERIDA DEL PROYECTO
+--------------------------------------------------------------
+Para empezar alcanza con un solo archivo (pso_riego.py). Si el
+proyecto crece, conviene separarlo así:
+
+    proyecto_pso_riego/
+    |-- pso_riego.py          (versión de un solo archivo)
+    |-- modelo.py             (parámetros, función objetivo, restricciones)
+    |-- pso.py                (algoritmo PSO y búsqueda aleatoria)
+    |-- experimentos.py       (corridas con semillas y parámetros)
+    |-- graficos.py           (todas las figuras)
+    |-- main.py               (ejecuta todo)
+    |-- resultados/           (imágenes y tablas generadas)
+    |-- informe/              (documento Word / PDF)
+    |-- README.txt            (cómo correrlo)
+
+
+--------------------------------------------------------------
+3. SECCIONES DEL CÓDIGO (pso_riego.py)
+--------------------------------------------------------------
+Sección 1 - Parámetros del problema
+    AREA_M2, ET_MM, REQ_L: parcela y requerimiento hídrico.
+    LB, UB: límites mínimo y máximo de [Q, P, t].
+    W_DEFICIT, W_RESTR: pesos de penalización.
+
+Sección 2 - Función objetivo y restricciones
+    perdida_fraccion(P): modelo de pérdidas según la presión.
+    restricciones(x): suma de violaciones (0 si cumple todo).
+    eficiencia(x): agua aprovechada / agua aplicada (para reportar).
+    funcion_objetivo(x): agua desperdiciada + penalización por
+    déficit + penalización por restricciones. Es lo que se minimiza.
+
+Sección 3 - PSO
+    pso(...): devuelve mejor posición, mejor valor, historial del
+    mejor valor por iteración e historial de posiciones.
+
+Sección 4 - Validación
+    validar_con_esfera(): prueba el PSO en una función conocida.
+    Debe dar un valor cercano a 0.
+
+Sección 5 - Línea base
+    busqueda_aleatoria(...): comparación justa con el mismo número
+    de evaluaciones que el PSO.
+
+Sección 6 - Experimentos
+    experimento_semillas(...): repite el PSO con distintas semillas.
+    experimento_parametros(): compara configuraciones de w, c1, c2
+    y tamaño del enjambre.
+
+Sección 7 - Gráficos
+    graficar_convergencia, graficar_particulas,
+    graficar_comparacion_parametros.
+
+Sección 8 - main
+    Orquesta todo e imprime los resultados.
+
+
+--------------------------------------------------------------
+4. PARÁMETROS DEL PSO
+--------------------------------------------------------------
+n_particulas   Tamaño del enjambre.           Típico: 20 a 50
+n_iter         Iteraciones máximas.           Típico: 100 a 300
+w_ini, w_fin   Inercia (decrece en el tiempo) Típico: 0.9 -> 0.4
+c1             Peso cognitivo (pbest).        Típico: 1.5 a 2
+c2             Peso social (gbest).           Típico: 1.5 a 2
+semilla        Para reproducir resultados.    Cualquier entero
+tol_estancamiento  Parar si no mejora en N iteraciones (opcional)
+
+Fórmulas de actualización:
+    v = w*v + c1*r1*(pbest - x) + c2*r2*(gbest - x)
+    x = x + v
+
+Notas:
+- La velocidad se limita al 20% del rango de cada variable.
+- Si una partícula se sale del rango, se recorta al borde.
+
+
+--------------------------------------------------------------
+5. QUÉ TIENEN QUE AJUSTAR (LOS "TODO")
+--------------------------------------------------------------
+[ ] Definir el cultivo y la parcela reales (área y requerimiento
+    hídrico) y justificar los valores.
+[ ] Reemplazar o justificar perdida_fraccion(P). La fórmula actual
+    es inventada y simplificada.
+[ ] Revisar las restricciones de ejemplo:
+      - Caudal máximo según presión (Q <= 50*sqrt(P))
+      - Consumo total máximo por riego
+[ ] Revisar los pesos W_DEFICIT y W_RESTR.
+[ ] Definir una configuración fija "típica" razonable para la
+    comparación.
+[ ] Ampliar la grilla de experimentos de parámetros.
+[ ] Decidir si se usa criterio de parada por estancamiento.
+
+
+--------------------------------------------------------------
+6. MODELO MATEMÁTICO ACTUAL (PARA EXPLICAR EN EL INFORME)
+--------------------------------------------------------------
+Variables:
+    Q = caudal (L/min), P = presión (bar), t = tiempo (min)
+
+Volumen aplicado:
+    V = Q * t
+
+Fracción de pérdidas (mínima en 2 bar):
+    perdida(P) = 0.05 + 0.03 * (P - 2)^2
+
+Agua útil que llega al cultivo:
+    V_util = V * (1 - perdida(P))
+
+Desperdicio y déficit:
+    desperdicio = V - min(V_util, REQ_L)
+    deficit     = max(0, REQ_L - V_util)
+
+Función objetivo (se minimiza):
+    f = desperdicio + W_DEFICIT * deficit + W_RESTR * violaciones
+
+Eficiencia hídrica (para reportar):
+    eficiencia = min(V_util, REQ_L) / V
+
+Aclarar siempre en el informe que es un modelo simplificado y
+explicar cada supuesto.
+
+
+--------------------------------------------------------------
+7. EXPERIMENTOS Y VALIDACIÓN (ORDEN RECOMENDADO)
+--------------------------------------------------------------
+1) Validar el PSO con la función esfera (debe dar ~0).
+2) Correr el PSO con 30 semillas y reportar media y desviación.
+3) Comparar contra la búsqueda aleatoria (mismas evaluaciones).
+4) Comparar contra una configuración fija típica.
+5) Probar distintas combinaciones de parámetros y ver el efecto
+   en la convergencia.
+6) Guardar los gráficos y la tabla con la mejor configuración.
+
+
+--------------------------------------------------------------
+8. RESULTADOS QUE DEBEN QUEDAR PARA EL INFORME
+--------------------------------------------------------------
+- Curva de convergencia (convergencia.png)
+- Evolución de las partículas (particulas.png)
+- Efecto de los parámetros (parametros.png)
+- Tabla con la mejor configuración (Q, P, t) y su eficiencia
+- Tabla comparativa: PSO vs búsqueda aleatoria vs configuración fija
+- Media y desviación estándar de las corridas
+
+
+--------------------------------------------------------------
+9. DIVISIÓN DEL TRABAJO SUGERIDA
+--------------------------------------------------------------
+Persona A (modelo):
+    - Definir parcela, cultivo y supuestos
+    - Función objetivo y restricciones
+    - Redactar el modelo matemático en el informe
+
+Persona B (algoritmo):
+    - Implementación y ajuste del PSO
+    - Experimentos y gráficos
+    - Redactar marco teórico e implementación en el informe
+
+Juntos:
+    - Integración del código
+    - Análisis y discusión de resultados
+    - Conclusiones y presentación
+
+
+--------------------------------------------------------------
+10. ESTRUCTURA DEL INFORME
+--------------------------------------------------------------
+1. Introducción y objetivo
+2. Marco teórico (PSO, ecuaciones, parámetros)
+3. Descripción del problema y modelo matemático
+4. Implementación (pseudocódigo y decisiones de diseño)
+5. Experimentos y resultados
+6. Análisis y discusión (limitaciones, ventajas y desventajas)
+7. Conclusiones
+8. Referencias
+
+
+--------------------------------------------------------------
+11. PSEUDOCÓDIGO DEL PSO (PARA EL INFORME)
+--------------------------------------------------------------
+Inicializar enjambre con posiciones y velocidades aleatorias
+Evaluar cada partícula y fijar pbest y gbest
+Mientras no se cumpla el criterio de parada:
+    Para cada partícula:
+        Actualizar velocidad
+        Actualizar posición (recortar al rango)
+        Evaluar la función objetivo
+        Si mejora su pbest, actualizar pbest
+        Si mejora el gbest, actualizar gbest
+    Actualizar la inercia w
+Devolver gbest (mejor configuración encontrada)
+
+
+--------------------------------------------------------------
+12. CHECKLIST FINAL ANTES DE ENTREGAR
+--------------------------------------------------------------
+[ ] El código corre sin errores desde cero
+[ ] El PSO pasó la validación con la esfera
+[ ] Los resultados se pueden reproducir (semillas fijas)
+[ ] Los supuestos del modelo están explicados
+[ ] Hay comparación contra una línea base
+[ ] Los gráficos están en el informe con título y ejes claros
+[ ] Se reportan media y desviación de varias corridas
+[ ] El informe tiene todas las secciones
+[ ] Presentación lista (problema, partículas, convergencia, resultado)
+[ ] Código versionado en un repositorio compartido (GitHub)
+[ ] Confirmado con el profesor: formato de entrega, lenguaje y datos
+
+
+--------------------------------------------------------------
+13. ERRORES COMUNES A EVITAR
+--------------------------------------------------------------
+- Modelo demasiado complejo: es preferible uno simple y bien
+  justificado.
+- Penalizaciones mal escaladas: si W_RESTR es muy bajo, el PSO
+  ignora las restricciones; si es muy alto, se estanca.
+- Reportar una sola corrida: PSO es estocástico, hay que repetir.
+- No comparar contra nada: sin línea base no se demuestra que PSO
+  aporta.
+- No fijar semillas: los resultados no se pueden reproducir.
+- Olvidar las unidades de cada variable en el informe y los gráficos.

@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+# Los resultados se regeneran con: python main.py
+# (sacar la siguiente linea si quieren versionarlos)
+resultados/
