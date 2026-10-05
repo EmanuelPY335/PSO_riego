@@ -4,3 +4,5 @@ __pycache__/
 # Los resultados se regeneran con: python main.py
 # (sacar la siguiente linea si quieren versionarlos)
 resultados/
+# Graficos que genera pso_riego.py en la carpeta principal
+/*.png
